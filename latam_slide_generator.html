@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LATAM Football — Slide Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #0a0a0a; --bg2: #111; --bg3: #1a1a1a;
+  --border: #222; --border2: #333;
+  --text: #f0ede8; --text2: #888; --text3: #444;
+  --sans: 'DM Sans', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --r: 8px; --r2: 12px;
+}
+body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 14px; min-height: 100vh; }
+
+.app { display: grid; grid-template-columns: 340px 1fr; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar { background: var(--bg2); border-right: 0.5px solid var(--border); padding: 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; overflow-y: auto; position: sticky; top: 0; height: 100vh; }
+.brand { display: flex; align-items: center; gap: 8px; margin-bottom: 0.25rem; }
+.brand-dot { width: 28px; height: 28px; background: #0d1a00; border: 0.5px solid #2a4000; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #7fff3a; }
+.brand-name { font-size: 13px; font-weight: 600; }
+.brand-sub { font-size: 10px; color: var(--text3); }
+.fl { display: flex; flex-direction: column; gap: 5px; }
+.lbl { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; }
+select, input[type="text"], textarea { background: var(--bg3); border: 0.5px solid var(--border); border-radius: var(--r); color: var(--text); font-family: var(--sans); font-size: 13px; padding: 8px 10px; width: 100%; transition: border-color 0.1s; }
+select:focus, input:focus, textarea:focus { outline: none; border-color: var(--border2); }
+select option { background: var(--bg3); }
+textarea { resize: vertical; min-height: 70px; line-height: 1.5; }
+.pts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.pt-field { display: flex; flex-direction: column; gap: 4px; }
+.pt-field label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; }
+.pt-field textarea { min-height: 56px; font-size: 12px; }
+.slide-tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+.slide-tab { padding: 5px 10px; border-radius: 99px; font-size: 11px; font-weight: 500; cursor: pointer; border: 0.5px solid var(--border); color: var(--text3); background: var(--bg3); transition: all 0.1s; }
+.slide-tab.on { color: #fff; font-weight: 600; }
+.divider { border: none; border-top: 0.5px solid var(--border); }
+.gen-btn { background: #7fff3a; border: none; border-radius: var(--r); color: #050e00; font-family: var(--sans); font-size: 14px; font-weight: 700; padding: 12px; width: 100%; cursor: pointer; transition: opacity 0.15s; margin-top: auto; }
+.gen-btn:hover { opacity: 0.85; }
+.export-all-btn { background: var(--bg3); border: 0.5px solid var(--border2); border-radius: var(--r); color: var(--text2); font-family: var(--sans); font-size: 12px; font-weight: 500; padding: 9px; width: 100%; cursor: pointer; transition: all 0.1s; }
+.export-all-btn:hover { color: var(--text); border-color: var(--border2); }
+
+/* MAIN */
+.main { padding: 2rem; display: flex; flex-direction: column; gap: 1.5rem; overflow-y: auto; }
+.main-hd { font-size: 12px; color: var(--text3); }
+.preview-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.preview-wrap { display: flex; flex-direction: column; gap: 6px; }
+.preview-label { font-size: 10px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.07em; }
+.preview-card { position: relative; width: 100%; aspect-ratio: 1; border-radius: var(--r2); overflow: hidden; cursor: pointer; transition: transform 0.15s; }
+.preview-card:hover { transform: scale(1.02); }
+.slide-canvas { width: 1080px; height: 1080px; position: relative; overflow: hidden; display: none; }
+
+/* SLIDE STYLES */
+.s-bg { position: absolute; inset: 0; }
+.s-bg-rect { position: absolute; inset: 0; }
+.s-overlay { position: absolute; inset: 0; background: linear-gradient(135deg, rgba(0,0,0,0.15), rgba(0,0,0,0.5)); }
+.s-content { position: absolute; inset: 0; padding: 70px; display: flex; flex-direction: column; justify-content: space-between; }
+.s-top { display: flex; align-items: center; justify-content: space-between; }
+.s-pill { display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px; border-radius: 99px; font-size: 26px; font-weight: 700; font-family: 'DM Sans', sans-serif; letter-spacing: 0.03em; }
+.s-cat { font-size: 22px; font-weight: 600; color: rgba(255,255,255,0.5); letter-spacing: 0.12em; text-transform: uppercase; font-family: 'DM Sans', sans-serif; }
+.s-middle { flex: 1; display: flex; flex-direction: column; justify-content: center; padding: 60px 0 40px; }
+.s-headline { font-size: 86px; font-weight: 800; color: #fff; line-height: 1.1; font-family: 'DM Sans', sans-serif; }
+.s-line { width: 100px; height: 6px; border-radius: 3px; margin-top: 40px; }
+.s-bottom { display: flex; align-items: center; justify-content: space-between; }
+.s-handle { font-size: 22px; color: rgba(255,255,255,0.3); font-family: 'JetBrains Mono', monospace; }
+.s-swipe { font-size: 20px; color: rgba(255,255,255,0.25); }
+
+/* POINT SLIDE */
+.s-num { font-size: 160px; font-weight: 800; line-height: 1; font-family: 'DM Sans', sans-serif; }
+.s-num-line { width: 80px; height: 5px; border-radius: 3px; margin: 30px 0 50px; }
+.s-point { font-size: 72px; font-weight: 700; color: #fff; line-height: 1.2; font-family: 'DM Sans', sans-serif; }
+
+/* CTA SLIDE */
+.s-cta-center { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 30px; }
+.s-cta-icon { font-size: 120px; }
+.s-cta-title { font-size: 72px; font-weight: 800; color: #fff; line-height: 1.15; font-family: 'DM Sans', sans-serif; }
+.s-cta-flags { font-size: 40px; letter-spacing: 4px; }
+.s-cta-handle { display: inline-block; border: 3px solid rgba(255,255,255,0.2); border-radius: 99px; padding: 16px 48px; font-size: 32px; font-weight: 700; color: rgba(255,255,255,0.7); font-family: 'JetBrains Mono', monospace; }
+</style>
+</head>
+<body>
+
+<!-- HIDDEN CANVASES FOR EXPORT -->
+<div id="exportZone" style="position:fixed;left:-9999px;top:0;width:1080px"></div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-dot">LF</div>
+      <div>
+        <div class="brand-name">LATAM Football</div>
+        <div class="brand-sub">Slide Generator — Design C</div>
+      </div>
+    </div>
+
+    <div class="fl">
+      <div class="lbl">Country</div>
+      <select id="countrySelect" onchange="update()">
+        <option value="peru">🇵🇪 Peru</option>
+        <option value="brazil">🇧🇷 Brazil</option>
+        <option value="argentina">🇦🇷 Argentina</option>
+        <option value="colombia">🇨🇴 Colombia</option>
+        <option value="chile">🇨🇱 Chile</option>
+        <option value="uruguay">🇺🇾 Uruguay</option>
+        <option value="mexico">🇲🇽 Mexico</option>
+        <option value="ecuador">🇪🇨 Ecuador</option>
+        <option value="venezuela">🇻🇪 Venezuela</option>
+        <option value="paraguay">🇵🇾 Paraguay</option>
+        <option value="bolivia">🇧🇴 Bolivia</option>
+      </select>
+    </div>
+
+    <div class="fl">
+      <div class="lbl">Category</div>
+      <select id="categorySelect" onchange="update()">
+        <option>BREAKING</option>
+        <option>TRANSFER</option>
+        <option>STATS</option>
+        <option>COPA</option>
+        <option>RESULT</option>
+        <option>RISING</option>
+        <option>ANALYSIS</option>
+        <option>RIVALRY</option>
+      </select>
+    </div>
+
+    <div class="fl">
+      <div class="lbl">Headline (Slide 1)</div>
+      <textarea id="headlineIn" oninput="update()" placeholder="e.g. Alianza Lima signs record-breaking deal worth $12M">Alianza Lima signs record-breaking deal worth $12M</textarea>
+    </div>
+
+    <div class="fl">
+      <div class="lbl">Points (Slides 2–5)</div>
+      <div class="pts-grid">
+        <div class="pt-field"><label>Point 01</label><textarea id="p1" oninput="update()" placeholder="Key fact one">Highest paid player in Peruvian football history</textarea></div>
+        <div class="pt-field"><label>Point 02</label><textarea id="p2" oninput="update()" placeholder="Key fact two">Club broke their own transfer record set in 2021</textarea></div>
+        <div class="pt-field"><label>Point 03</label><textarea id="p3" oninput="update()" placeholder="Key fact three">Deal includes Copa Libertadores bonus clauses</textarea></div>
+        <div class="pt-field"><label>Point 04</label><textarea id="p4" oninput="update()" placeholder="Key fact four">Player previously played in MLS for 3 seasons</textarea></div>
+      </div>
+    </div>
+
+    <div class="fl">
+      <div class="lbl">Handle</div>
+      <input type="text" id="handleIn" value="@latamfootballfacts" oninput="update()" />
+    </div>
+
+    <hr class="divider" />
+
+    <div class="fl">
+      <div class="lbl">Preview Slide</div>
+      <div class="slide-tabs" id="slideTabs"></div>
+    </div>
+
+    <hr class="divider" />
+
+    <button class="gen-btn" onclick="exportCurrentSlide()">Export current slide as PNG ↗</button>
+    <button class="export-all-btn" onclick="exportAllSlides()">Export all 6 slides</button>
+  </aside>
+
+  <main class="main">
+    <div class="main-hd">Live Preview — 1080×1080px · Click slide to preview full size</div>
+    <div class="preview-grid" id="previewGrid"></div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script>
+const COUNTRIES = {
+  peru:      { name:'Peru',      flag:'🇵🇪', color1:'#8B0000', color2:'#3a0000', accent:'#D91023', pill:'#D91023', pillText:'#fff' },
+  brazil:    { name:'Brazil',    flag:'🇧🇷', color1:'#003d00', color2:'#001500', accent:'#FFDF00', pill:'#009C3B', pillText:'#FFDF00' },
+  argentina: { name:'Argentina', flag:'🇦🇷', color1:'#003366', color2:'#001020', accent:'#74ACDF', pill:'#74ACDF', pillText:'#000' },
+  colombia:  { name:'Colombia',  flag:'🇨🇴', color1:'#4a3a00', color2:'#1a1200', accent:'#FCD116', pill:'#FCD116', pillText:'#000' },
+  chile:     { name:'Chile',     flag:'🇨🇱', color1:'#6B0010', color2:'#200005', accent:'#D52B1E', pill:'#D52B1E', pillText:'#fff' },
+  uruguay:   { name:'Uruguay',   flag:'🇺🇾', color1:'#003366', color2:'#001020', accent:'#74ACDF', pill:'#5B9BD5', pillText:'#fff' },
+  mexico:    { name:'Mexico',    flag:'🇲🇽', color1:'#003d00', color2:'#001500', accent:'#CE1126', pill:'#006847', pillText:'#fff' },
+  ecuador:   { name:'Ecuador',   flag:'🇪🇨', color1:'#4a3a00', color2:'#1a1200', accent:'#FFD100', pill:'#003087', pillText:'#FFD100' },
+  venezuela: { name:'Venezuela', flag:'🇻🇪', color1:'#4a3a00', color2:'#1a1200', accent:'#CF142B', pill:'#CF142B', pillText:'#FFD700' },
+  paraguay:  { name:'Paraguay',  flag:'🇵🇾', color1:'#6B0010', color2:'#200005', accent:'#D52B1E', pill:'#D52B1E', pillText:'#fff' },
+  bolivia:   { name:'Bolivia',   flag:'🇧🇴', color1:'#6B0010', color2:'#200005', accent:'#F4E400', pill:'#D52B1E', pillText:'#F4E400' }
+};
+
+let currentSlide = 0;
+
+function getVals() {
+  const ck = document.getElementById('countrySelect').value;
+  const c = COUNTRIES[ck];
+  return {
+    country: c,
+    category: document.getElementById('categorySelect').value,
+    headline: document.getElementById('headlineIn').value || '{{HEADLINE}}',
+    p1: document.getElementById('p1').value || '{{POINT_1}}',
+    p2: document.getElementById('p2').value || '{{POINT_2}}',
+    p3: document.getElementById('p3').value || '{{POINT_3}}',
+    p4: document.getElementById('p4').value || '{{POINT_4}}',
+    handle: document.getElementById('handleIn').value || '@latamfootballfacts'
+  };
+}
+
+function makeSlide(v, idx) {
+  const c = v.country;
+  const slides = [
+    makeSlide1(v, c),
+    makePointSlide(v, c, '01', v.p1),
+    makePointSlide(v, c, '02', v.p2),
+    makePointSlide(v, c, '03', v.p3),
+    makePointSlide(v, c, '04', v.p4),
+    makeCTASlide(v, c)
+  ];
+  return slides[idx] || slides[0];
+}
+
+function bgHTML(c) {
+  return `<div class="s-bg">
+    <div class="s-bg-rect" style="background:linear-gradient(135deg,${c.color1} 0%,${c.color2} 100%)"></div>
+    <div class="s-overlay"></div>
+  </div>`;
+}
+
+function makeSlide1(v, c) {
+  return `${bgHTML(c)}
+  <div class="s-content">
+    <div class="s-top">
+      <div class="s-pill" style="background:${c.pill};color:${c.pillText}">${c.flag} ${c.name}</div>
+      <div class="s-cat">${v.category}</div>
+    </div>
+    <div class="s-middle">
+      <div class="s-headline">${v.headline}</div>
+      <div class="s-line" style="background:${c.accent}"></div>
+    </div>
+    <div class="s-bottom">
+      <div class="s-handle">${v.handle}</div>
+      <div class="s-swipe">swipe →</div>
+    </div>
+  </div>`;
+}
+
+function makePointSlide(v, c, num, point) {
+  return `${bgHTML(c)}
+  <div class="s-content">
+    <div class="s-top">
+      <div class="s-pill" style="background:${c.pill};color:${c.pillText}">${c.flag} ${c.name}</div>
+      <div class="s-cat">${v.category}</div>
+    </div>
+    <div class="s-middle">
+      <div class="s-num" style="color:${c.accent};opacity:0.25">${num}</div>
+      <div class="s-num-line" style="background:${c.accent}"></div>
+      <div class="s-point">${point}</div>
+    </div>
+    <div class="s-bottom">
+      <div class="s-handle">${v.handle}</div>
+      <div class="s-swipe">swipe →</div>
+    </div>
+  </div>`;
+}
+
+function makeCTASlide(v, c) {
+  return `${bgHTML(c)}
+  <div class="s-content">
+    <div class="s-top">
+      <div class="s-pill" style="background:${c.pill};color:${c.pillText}">${c.flag} ${c.name}</div>
+    </div>
+    <div class="s-cta-center">
+      <div class="s-cta-icon">⚽</div>
+      <div class="s-cta-title">Follow for daily LATAM Football</div>
+      <div class="s-cta-flags">🇵🇪 🇧🇷 🇦🇷 🇨🇴 🇨🇱 🇺🇾 🇲🇽 🇪🇨 🇻🇪 🇵🇾 🇧🇴</div>
+      <div class="s-cta-handle">${v.handle}</div>
+    </div>
+  </div>`;
+}
+
+function buildPreview(html, scale) {
+  const div = document.createElement('div');
+  div.style.cssText = `width:1080px;height:1080px;position:relative;overflow:hidden;border-radius:${scale < 1 ? '12px' : '0'};transform:scale(${scale});transform-origin:top left;flex-shrink:0`;
+  div.innerHTML = html;
+  return div;
+}
+
+function update() {
+  const v = getVals();
+  const grid = document.getElementById('previewGrid');
+  grid.innerHTML = '';
+
+  const labels = ['Slide 1 — Headline', 'Slide 2 — Point 01', 'Slide 3 — Point 02', 'Slide 4 — Point 03', 'Slide 5 — Point 04', 'Slide 6 — CTA'];
+
+  // Build tabs
+  const tabsEl = document.getElementById('slideTabs');
+  tabsEl.innerHTML = labels.map((l, i) => `<div class="slide-tab ${i===currentSlide?'on':''}" style="${i===currentSlide?`background:${v.country.pill};border-color:${v.country.pill};color:${v.country.pillText}`:'color:#555'}" onclick="setSlide(${i})">${i+1}</div>`).join('');
+
+  for (let i = 0; i < 6; i++) {
+    const html = makeSlide(v, i);
+    const wrap = document.createElement('div');
+    wrap.className = 'preview-wrap';
+
+    const label = document.createElement('div');
+    label.className = 'preview-label';
+    label.textContent = labels[i];
+
+    const card = document.createElement('div');
+    card.className = 'preview-card';
+    card.style.cssText = `border:${i===currentSlide?`2px solid ${v.country.accent}`:'0.5px solid #1e1e1e'}`;
+    card.onclick = () => { currentSlide = i; update(); };
+
+    const inner = document.createElement('div');
+    inner.style.cssText = 'width:1080px;height:1080px;position:relative;overflow:hidden;transform-origin:top left;pointer-events:none';
+    inner.innerHTML = html;
+
+    card.appendChild(inner);
+    wrap.appendChild(label);
+    wrap.appendChild(card);
+    grid.appendChild(wrap);
+
+    // Scale to fit
+    requestAnimationFrame(() => {
+      const w = card.offsetWidth;
+      const scale = w / 1080;
+      inner.style.transform = `scale(${scale})`;
+      card.style.height = w + 'px';
+    });
+  }
+}
+
+function setSlide(i) { currentSlide = i; update(); }
+
+async function exportSlide(idx) {
+  const v = getVals();
+  const html = makeSlide(v, idx);
+
+  const div = document.createElement('div');
+  div.style.cssText = 'width:1080px;height:1080px;position:fixed;left:-9999px;top:0;overflow:hidden';
+  div.innerHTML = html;
+  document.body.appendChild(div);
+
+  const labels = ['headline','point01','point02','point03','point04','cta'];
+  try {
+    const canvas = await html2canvas(div, { width: 1080, height: 1080, scale: 1, useCORS: true, backgroundColor: null });
+    const link = document.createElement('a');
+    link.download = `${v.country.name.toLowerCase()}_slide${idx+1}_${labels[idx]}.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  } finally {
+    document.body.removeChild(div);
+  }
+}
+
+function exportCurrentSlide() { exportSlide(currentSlide); }
+
+async function exportAllSlides() {
+  const btn = document.querySelector('.export-all-btn');
+  btn.textContent = 'Exporting...';
+  btn.disabled = true;
+  for (let i = 0; i < 6; i++) {
+    await exportSlide(i);
+    await new Promise(r => setTimeout(r, 500));
+  }
+  btn.textContent = 'Export all 6 slides';
+  btn.disabled = false;
+}
+
+// ── URL PARAMS — n8n fills these automatically ──
+function loadFromURL() {
+  const p = new URLSearchParams(window.location.search);
+  if (!p.has('country') && !p.has('headline')) return false;
+
+  // Country
+  if (p.get('country')) {
+    const sel = document.getElementById('countrySelect');
+    const val = p.get('country').toLowerCase();
+    for (let o of sel.options) { if (o.value === val) { sel.value = val; break; } }
+  }
+  // Category
+  if (p.get('category')) {
+    const sel = document.getElementById('categorySelect');
+    const val = p.get('category').toUpperCase();
+    for (let o of sel.options) { if (o.value === val) { sel.value = val; break; } }
+    if (!sel.value) {
+      const opt = document.createElement('option');
+      opt.value = val; opt.textContent = val;
+      sel.appendChild(opt); sel.value = val;
+    }
+  }
+  if (p.get('headline')) document.getElementById('headlineIn').value = decodeURIComponent(p.get('headline'));
+  if (p.get('p1')) document.getElementById('p1').value = decodeURIComponent(p.get('p1'));
+  if (p.get('p2')) document.getElementById('p2').value = decodeURIComponent(p.get('p2'));
+  if (p.get('p3')) document.getElementById('p3').value = decodeURIComponent(p.get('p3'));
+  if (p.get('p4')) document.getElementById('p4').value = decodeURIComponent(p.get('p4'));
+  if (p.get('handle')) document.getElementById('handleIn').value = decodeURIComponent(p.get('handle'));
+
+  // Show auto-filled banner
+  const slot = p.get('slot') || '';
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:999;background:#7fff3a;color:#050e00;font-family:DM Sans,sans-serif;font-size:12px;font-weight:600;padding:8px 16px;display:flex;align-items:center;justify-content:space-between';
+  banner.innerHTML = `<span>⚡ Auto-filled by n8n agent${slot ? ' · Slot: ' + slot : ''} — Check slides then click Export All</span><button onclick="this.parentElement.remove()" style="background:none;border:none;cursor:pointer;font-size:14px;color:#050e00">✕</button>`;
+  document.body.prepend(banner);
+  return true;
+}
+
+// ── BUFFER DEEP LINK HELPER ──
+function openBuffer() {
+  window.open('https://buffer.com/app', '_blank');
+}
+
+// Add Buffer button to sidebar
+const bufBtn = document.createElement('button');
+bufBtn.className = 'export-all-btn';
+bufBtn.style.cssText = 'background:#1da1f2;border-color:#1da1f2;color:#fff;margin-top:4px';
+bufBtn.textContent = 'Open Buffer to schedule ↗';
+bufBtn.onclick = openBuffer;
+document.querySelector('.sidebar').appendChild(bufBtn);
+
+// Init tabs
+for (let i = 0; i < 6; i++) {
+  const t = document.createElement('div');
+  t.className = 'slide-tab' + (i===0?' on':'');
+  t.textContent = i+1;
+  t.onclick = () => { currentSlide = i; update(); };
+  document.getElementById('slideTabs').appendChild(t);
+}
+
+loadFromURL();
+update();
+window.addEventListener('resize', update);
+</script>
+</body>
+</html>
